@@ -128,7 +128,7 @@ def train(args, d_A:Discriminator, d_B:Discriminator, g_AB:Generator, g_BA:Gener
             global_step += 1
 
             if args.logging_steps > 0 and global_step % args.logging_steps == 0:
-                tb_writter.add_scalar('loss_Generator/total', loss_G)
+                tb_writter.add_scalar('loss_Generator/total', loss_G, global_step)
                 tb_writter.add_scalar('loss_Generator/GAN_loss', loss_G_A + loss_G_B, global_step)
                 tb_writter.add_scalar('loss_Generator/Cycle_loss', loss_cycle_A + loss_cycle_B, global_step)
                 tb_writter.add_scalar('loss_Generator/Identity_loss', loss_identity_A + loss_identity_B, global_step)
@@ -159,9 +159,6 @@ def train(args, d_A:Discriminator, d_B:Discriminator, g_AB:Generator, g_BA:Gener
 def main():
     parser = argparse.ArgumentParser()
 
-    '''
-    python train.py --data_dir=data/monet2photo --output_dir=output/model/monet2photo
-    '''
     parser.add_argument('--start_epoch', type=int, default=0, 
                         help='starting epoch')
     parser.add_argument('--n_epochs', type=int, default=200, 
@@ -178,7 +175,7 @@ def main():
                         help='number of cpu threads to use during batch generation')   
     parser.add_argument('--logging_steps', type=int, default=50,
                         help="Log every X updates steps.")                 
-    parser.add_argument('--save_steps', type=int, default=50, 
+    parser.add_argument('--save_steps', type=int, default=3000, 
                         help='Save checkpoint every X updates steps.')
     parser.add_argument('--output_dir', type=str, default='output/model',
                         help='saving model path. default=("output/model")')
@@ -205,12 +202,15 @@ def main():
                         help='Generator filters')
     args = parser.parse_args()
 
+    args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    args.n_gpu = torch.cuda.device_count()
+
     # Setup logging    
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO)
-
-    args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    logger.warning("device: %s, n_gpu: %s",
+                    args.device, args.n_gpu)
     
     # ------ Load model and dataset
     d_A = Discriminator(args.a_image_channels, args.disc_n_filters)

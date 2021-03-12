@@ -29,7 +29,6 @@ class Discriminator(nn.Module):
 
         self.kernel_size = 4;
         self.leakyrelu_negative_slop = 0.2
-
         
         def conv4(in_channel, out_channel, stride = 2, norm=True):
             ret = []
@@ -49,13 +48,17 @@ class Discriminator(nn.Module):
         model += conv4(disc_n_filters * 2, disc_n_filters * 4, stride=2)
         model += conv4(disc_n_filters * 4, disc_n_filters * 8, stride=2)
 
-        model += [nn.Conv2d(disc_n_filters * 8, 1, kernel_size=4, padding=1)]
+        model += [nn.Conv2d(disc_n_filters * 8, 1, kernel_size=self.kernel_size, padding=1)]
         self.model = nn.Sequential(*model)
 
+        self.sigmoid = nn.Sigmoid()
+
     def forward(self, x):
-        x =  self.model(x)
+        x = self.model(x)
+        x = self.sigmoid(x)
+        return x
         # Average pooling and flatten
-        return F.avg_pool2d(x, x.size()[2:]).view(x.size()[0], -1)
+        #return F.avg_pool2d(x, x.size()[2:]).view(x.size()[0], -1)
 
 
 class Generator(nn.Module):
