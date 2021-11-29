@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import RandomSampler, DataLoader
 from torch.nn import MSELoss
+from torch.optim.lr_scheduler import LambdaLR
 from torchvision.transforms import transforms
 import torch.optim 
 
@@ -17,7 +18,8 @@ from utils import DecayLR, ImageDataset, ReplayBuffer, save_model
 
 logger = logging.getLogger(__name__)
 
-def train(args, d_A:Discriminator, d_B:Discriminator, g_AB:Generator, g_BA:Generator,
+
+def train(args, d_A: Discriminator, d_B: Discriminator, g_AB: Generator, g_BA: Generator,
           train_dataset):
 
     tb_writter = SummaryWriter()
@@ -26,9 +28,9 @@ def train(args, d_A:Discriminator, d_B:Discriminator, g_AB:Generator, g_BA:Gener
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, 
                                   batch_size=args.batch_size, num_workers=args.n_cpu)
     
-    gan_criterion = nn.BCELoss()#.to(args.device)
-    cycle_criterion = nn.L1Loss()#.to(args.device)
-    identity_criterion = nn.L1Loss()#.to(args.device)
+    gan_criterion = nn.BCELoss()
+    cycle_criterion = nn.L1Loss()
+    identity_criterion = nn.L1Loss()
 
     optimizer_G = torch.optim.Adam(itertools.chain(g_AB.parameters(), g_BA.parameters()),
                                    lr=args.lr, betas=(0.5, 0.999))
@@ -38,9 +40,12 @@ def train(args, d_A:Discriminator, d_B:Discriminator, g_AB:Generator, g_BA:Gener
                                    lr=args.lr, betas=(0.5, 0.999))
 
 
-    lr_scheduler_G = torch.optim.lr_scheduler.LambdaLR(optimizer_G, lr_lambda=DecayLR(args.n_epochs, args.start_epoch, args.decay_epoch).step)
-    lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A, lr_lambda=DecayLR(args.n_epochs, args.start_epoch, args.decay_epoch).step)
-    lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B, lr_lambda=DecayLR(args.n_epochs, args.start_epoch, args.decay_epoch).step)
+    lr_scheduler_G = LambdaLR(optimizer_G,
+                              lr_lambda=DecayLR(args.n_epochs, args.start_epoch, args.decay_epoch).step)
+    lr_scheduler_D_A = LambdaLR(optimizer_D_A,
+                                lr_lambda=DecayLR(args.n_epochs, args.start_epoch, args.decay_epoch).step)
+    lr_scheduler_D_B = LambdaLR(optimizer_D_B,
+                                lr_lambda=DecayLR(args.n_epochs, args.start_epoch, args.decay_epoch).step)
     t_total = len(train_dataloader) * args.n_epochs
 
     # Train!
@@ -150,10 +155,6 @@ def train(args, d_A:Discriminator, d_B:Discriminator, g_AB:Generator, g_BA:Gener
         lr_scheduler_G.step()
         lr_scheduler_D_A.step()
         lr_scheduler_D_B.step()
-            
-
-            
-
 
 
 def main():
@@ -222,7 +223,6 @@ def main():
     g_AB.to(args.device)
     g_BA = Generator(args.b_image_channels, args.a_image_channels, args.gen_n_filters)
     g_BA.to(args.device)
-    
 
     dataset = ImageDataset(args.data_dir, 
                            transform=transforms.Compose([
