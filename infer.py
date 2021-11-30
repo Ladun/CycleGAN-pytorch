@@ -127,9 +127,6 @@ def main():
 
     model = TestModel(args.image_channels, args.gen_n_filters, args.model_path, args.device)
     transform = transforms.Compose([
-                            transforms.Resize(int( args.image_size * 1.12)),
-                            transforms.RandomCrop( args.image_size),
-                            transforms.RandomHorizontalFlip(),
                             transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
