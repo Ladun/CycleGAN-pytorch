@@ -32,6 +32,7 @@ class ImageDataset(Dataset):
     def __len__(self) :
         return max(len(self.files_A), len(self.files_B))
 
+
 class ReplayBuffer():
     def __init__(self, max_size=50):
         assert (max_size > 0), 'Empty buffer or trying to create a black hole. Be careful.'
@@ -54,6 +55,7 @@ class ReplayBuffer():
                     to_return.append(element)
         return torch.cat(to_return)
 
+
 class DecayLR:
     def __init__(self, epochs, offset, decay_epochs):
         epoch_flag = epochs - decay_epochs
@@ -64,8 +66,6 @@ class DecayLR:
 
     def step(self, epoch):
         return 1.0 - max(0, epoch + self.offset - self.decay_epochs) / (self.epochs - self.decay_epochs)
-
-
 
 
 def save_model(d_A, d_B, g_AB, g_BA, model_folder):

@@ -3,9 +3,11 @@ import torch
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from PIL import Image
 
 from torchvision.transforms import transforms
+from torchvision.transforms.functional import to_pil_image
 
 from model.model import Generator
 
@@ -54,7 +56,6 @@ class UnNormalize(object):
 
 
 def process_img(img_path, transform):
-    
     img = Image.open(img_path)
     img = transform(img)
 
@@ -71,15 +72,35 @@ def plot_img(img, proccessed_img):
 
 
 def save_img(output_path, img):
+    img = to_pil_image(img)
+    img.save(output_path)
+
     pass
+
+
+def inference_one_image(image_path, transform, model, plot=False, output_path=None):
+    img = process_img(image_path, transform)
+    processed_img = model.run(img)
+
+    # --- Show
+    unNorm = UnNormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    img = unNorm(img)
+    processed_img = unNorm(processed_img)
+    if plot:
+        plot_img(img, processed_img)
+
+    if output_path:
+        save_img(output_path, processed_img)
+        logger.info(f"Process '{image_path}' => '{output_path}'")
+    else:
+        logger.info(f"Process '{image_path}'")
 
 
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--image_path", type=str, required=True,
-                        help="")
-
+                        help="image file path or directory")
     parser.add_argument("--model_path", type=str, required=True,
                         help="pretrained model path")
     parser.add_argument('--image_size', type=int, default=256,
@@ -90,9 +111,11 @@ def main():
                         help='Generator filters')
     parser.add_argument("--no_cuda", action='store_true',
                         help="Avoid using CUDA when available")
+    parser.add_argument("--plot", action='store_true',
+                        help="plot image")
     
     parser.add_argument("--output_path", type=str, default="",
-                        help="output path to save")
+                        help="output path to save, file or directory")
 
     args = parser.parse_args()
 
@@ -111,17 +134,29 @@ def main():
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     # --- Run
-    img = process_img(args.image_path, transform)
-    processed_img = model.run(img)
+    if os.path.isdir(args.image_path):
+        if args.output_path:
+            if not os.path.isdir(args.output_path):
+                print("Output path must be directory")
+                exit()
 
-    # --- Show
-    unNorm = UnNormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    img = unNorm(img)
-    processed_img = unNorm(processed_img)
-    plot_img(img, processed_img)
+        for file in os.listdir(args.image_path):
+            n, e = os.path.splitext(file)
+            if n.endswith("_out"):
+                continue
+            image_path = os.path.join(args.image_path, file)
+            output_path = None
+            if args.output_path:
+                output_path = os.path.join(args.output_path, file)
 
-    if args.output_path:
-        save_img(args.output_path, processed_img)
+                if output_path == image_path:
+                    output_path = os.path.join(args.output_path, n + "_out" + e)
+
+            inference_one_image(image_path=image_path, transform=transform, model=model,
+                                plot=args.plot or not args.output_path, output_path=output_path)
+    else:
+        inference_one_image(image_path=args.image_path, transform=transform, model=model,
+                            plot=args.plot or not args.output_path, output_path=args.output_path)
 
 
 if __name__ == "__main__":
