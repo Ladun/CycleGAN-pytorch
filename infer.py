@@ -133,6 +133,10 @@ def main():
                             transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
+    if not os.path.exists(args.output_path):
+        print("Output path doesn't exists")
+        exit()
+
     # --- Run
     if os.path.isdir(args.image_path):
         if args.output_path:
